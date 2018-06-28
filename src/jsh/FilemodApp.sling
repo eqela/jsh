@@ -1,0 +1,123 @@
+
+/*
+ * This file is part of Eqela JSH
+ * Copyright (c) 2018 Job and Esther Technologies Oy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+class is ConsoleApplicationMain:
+
+import capex.console
+import capex.util
+
+var mode as string
+var uid as string
+var gid as string
+var info = false
+var files = new vector<File>
+
+func initialize override as bool
+{
+	foreach arg in args {
+		if arg.isOption("mode") {
+			mode = arg.value
+		}
+		else if arg.isOption("uid") {
+			uid = arg.value
+		}
+		else if arg.isOption("gid") {
+			gid = arg.value
+		}
+		else if arg.isFlag("info") {
+			info = true
+		}
+		else if arg.isParameter() {
+			files += File.forPath(arg.parameter)
+		}
+		else {
+			arg.reportAsUnsupported(ctx)
+			return false
+		}
+	}
+	return true
+}
+
+func jshError(code as string, message as string, detail as string) as object
+{
+	var v = new DynamicMap()
+	v.set("errorCode", code)
+	v.set("errorMessage", message)
+	v.set("errorDetail", detail)
+	return v
+}
+
+func jshExecute as object
+{
+	var v = new DynamicMap()
+	var ffs as DynamicVector
+	foreach file in files {
+		if mode {
+			var mm = String.toIntegerFromOctal(mode)
+			if file.setMode(mm) == false:
+				return jshError("failedToSetMode", file.getLastErrorDescription(), file.getPath())
+		}
+		if uid {
+			var uu = String.toInteger(uid)
+			if file.setOwnerUser(uu) == false:
+				return jshError("failedToSetUser", file.getLastErrorDescription(), file.getPath())
+		}
+		if gid {
+			var gg = String.toInteger(gid)
+			if file.setOwnerGroup(gg) == false:
+				return jshError("failedToSetGroup", file.getLastErrorDescription(), file.getPath())
+		}
+		if info {
+			var st = file.stat()
+			if not st:
+				return jshError("failedToStat", file.getLastErrorDescription(), file.getPath())
+			if not ffs {
+				ffs = new DynamicVector()
+				v.set("files", ffs)
+			}
+			var info = new DynamicMap()
+			info.set("fileName", file.getBasename())
+			info.set("filePath", file.getPath())
+			info.set("size", st.getSize())
+			info.set("createTime", st.getCreateTime())
+			info.set("accessTime", st.getAccessTime())
+			info.set("modifyTime", st.getModifyTime())
+			info.set("ownerUser", st.getOwnerUser())
+			info.set("ownerGroup", st.getOwnerGroup())
+			info.set("mode", st.getMode())
+			info.set("executable", st.getExecutable())
+			info.set("type", st.getType())
+			info.set("link", st.getLink())
+			ffs.append(info)
+		}
+	}
+	return v
+}
+
+func execute override as bool
+{
+	var v = assert jshExecute()
+	stdout.print(JSONEncoder.encode(v))
+	return true
+}

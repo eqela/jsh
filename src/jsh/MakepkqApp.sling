@@ -1,0 +1,153 @@
+
+/*
+ * This file is part of Eqela JSH
+ * Copyright (c) 2018 Job and Esther Technologies Oy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+class is ConsoleApplicationMain:
+
+import capex.console
+import capex.util
+
+var sourceDir as File
+var vendor as string
+var name as string
+var version as string
+var platform as string
+var outputDir as File
+
+func initialize override as bool
+{
+	foreach arg in args {
+		if arg.isOption("vendor") {
+			vendor = arg.value
+		}
+		else if arg.isOption("name") {
+			name = arg.value
+		}
+		else if arg.isOption("version") {
+			version = arg.value
+		}
+		else if arg.isOption("platform") {
+			platform = arg.value
+		}
+		else if arg.isOption("output") {
+			outputDir = File.forPath(arg.value)
+		}
+		else if arg.isParameter() {
+			assert sourceDir == null:
+				Log.error(ctx, "Only one source directory can be specified")
+			sourceDir = File.forPath(arg.parameter)
+		}
+		else {
+			arg.reportAsUnsupported(ctx)
+			return false
+		}
+	}
+	return true
+}
+
+func generateManifest as File
+{
+	var tf = assert TemporaryFile.create():
+		Log.error(ctx, "Failed to create temporary file")
+	var manifest = new DynamicMap()
+	manifest.set("vendor", vendor)
+	manifest.set("name", name)
+	manifest.set("version", version)
+	manifest.set("platform", platform)
+	var ww = assert tf.write():
+		Log.error(ctx, "Failed to write to temporary file: `" .. tf.getPath() .. "'")
+	var pfw = PrintWriterWrapper.forWriter(ww)
+	pfw.print(JSONEncoder.encode(manifest))
+	ww.close()
+	return tf
+}
+
+func writePkq(manifest as File, sourceDir as File, df as File) as bool
+{
+	if df.exists() {
+		assert df.remove():
+			Log.error(ctx, "Failed to remove existing file: `" .. df.getPath() .. "'")
+	}
+	var zip = assert ZipWriter.forOutputFile(df):
+		Log.error(ctx, "Failed to create ZIP writer for file: `" .. df.getPath() .. "'")
+	Log.status(ctx, "[zip] " .. df.getPath() .. " ..")
+	assert zip.addFile(manifest, "manifest.json"):
+		Log.error(ctx, "Failed to add manifest to ZIP file")
+	var parentPathLength = String.getLength(sourceDir.getPath())
+	var ff = FileFinder.forRoot(sourceDir)
+	loop {
+		var file = ff.next()
+		if not file:
+			break
+		if file.isFile() == false:
+			continue
+		var fpath = file.getPath()
+		if String.isEmpty(fpath):
+			continue
+		var partialPath = String.getSubString(fpath, parentPathLength + 1)
+		if String.isEmpty(partialPath):
+			continue
+		partialPath = String.replace(partialPath, '\\', '/')
+		Log.status(ctx, "[zip] " .. file.getPath() .. " ..")
+		assert zip.addFile(file, "data/" .. partialPath):
+			Log.error(ctx, "Failed to add to ZIP file: `" .. file.getPath() .. "'")
+	}
+	assert zip.close():
+		Log.error(ctx, "Failed to finalize ZIP archive: `" .. df.getPath() .. "'")
+	return true
+}
+
+func execute override as bool
+{
+	assert sourceDir:
+		Log.error(ctx, "No source directory provided.")
+	assert sourceDir.isDirectory():
+		Log.error(ctx, "Not a directory: `" .. sourceDir.getPath() .. "'")
+	assert String.isNotEmpty(vendor):
+		Log.error(ctx, "No vendor specified")
+	assert String.isNotEmpty(name):
+		Log.error(ctx, "No name specified")
+	assert String.isNotEmpty(version):
+		Log.error(ctx, "No version specified")
+	assert String.isNotEmpty(platform):
+		Log.error(ctx, "No platform specified")
+	var od = outputDir
+	if od == null:
+		od = sourceDir.getParent()
+	var fnsb = new StringBuilder()
+	fnsb.append(vendor)
+	fnsb.append('_')
+	fnsb.append(name)
+	fnsb.append('_')
+	fnsb.append(version)
+	fnsb.append('_')
+	fnsb.append(platform)
+	fnsb.append(".pkq")
+	var fn = fnsb.toString()
+	var df = od.entry(fn)
+	var manifest = assert generateManifest():
+		Log.error(ctx, "Failed to generate manifest")
+	var v = writePkq(manifest,  sourceDir, df)
+	manifest.remove()
+	return v
+}

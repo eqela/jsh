@@ -1,0 +1,100 @@
+
+/*
+ * This file is part of Eqela JSH
+ * Copyright (c) 2018 Job and Esther Technologies Oy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+class is ConsoleApplicationMain:
+
+import capex.console
+import capex.util
+
+var dir as File
+var output as File
+var truncateDir = false
+
+func initialize override as bool
+{
+	foreach arg in args {
+		if arg.isParameter() {
+			assert dir == null:
+				Log.error(ctx, "Too many parameters")
+			dir = File.forPath(arg.parameter)
+		}
+		else if arg.isFlag("truncateDir") || arg.isFlag("truncatedir") || arg.isFlag("flat") {
+			truncateDir = true
+		}
+		else if arg.isOption("output") {
+			output = File.forPath(arg.value)
+		}
+		else {
+			arg.reportAsUnsupported(ctx)
+			return false
+		}
+	}
+	return true
+}
+
+func execute override as bool
+{
+	assert dir:
+		Log.error(ctx, "No directory provided.")
+	assert dir.isDirectory():
+		Log.error(ctx, "Not a directory: `" .. dir.getPath() .. "'")
+	var bn = dir.baseName()
+	assert String.isEmpty(bn) == false:
+		Log.error(ctx, "Empty basename: `" .. dir.getPath() .. "'")
+	var pd = assert dir.getParent():
+		Log.error(ctx, "Directory has no parent: `" .. dir.getPath() .. "'")
+	var parentPath = pd.getPath()
+	assert String.isNotEmpty(parentPath):
+		Log.error(ctx, "Parent path is empty: `" .. dir.getPath() .. "'")
+	var parentPathLength = String.getLength(parentPath)
+	if truncateDir:
+		parentPathLength = String.getLength(dir.getPath())
+	var of = output
+	if of == null:
+		of = pd.entry(bn .. ".zip")
+	var zip = assert ZipWriter.forOutputFile(of):
+		Log.error(ctx, "Failed to create ZIP writer for file: `" .. of.getPath() .. "'")
+	Log.status(ctx, "[zip] " .. of.getPath() .. " ..")
+	var ff = FileFinder.forRoot(dir)
+	loop {
+		var file = ff.next()
+		if not file:
+			break
+		if file.isFile() == false:
+			continue
+		var fpath = file.getPath()
+		if String.isEmpty(fpath):
+			continue
+		var partialPath = String.getSubString(fpath, parentPathLength + 1)
+		if String.isEmpty(partialPath):
+			continue
+		partialPath = String.replace(partialPath, '\\', '/')
+		Log.status(ctx, "[zip] " .. file.getPath() .. " ..")
+		assert zip.addFile(file, partialPath):
+			Log.error(ctx, "Failed to add to ZIP file: `" .. file.getPath() .. "'")
+	}
+	assert zip.close():
+		Log.error(ctx, "Failed to finalize ZIP archive: `" .. of.getPath() .. "'")
+	return true
+}

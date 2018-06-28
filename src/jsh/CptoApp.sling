@@ -1,0 +1,127 @@
+
+/*
+ * This file is part of Eqela JSH
+ * Copyright (c) 2018 Job and Esther Technologies Oy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+class is ConsoleApplicationMain:
+
+import capex.console
+import capex.util
+
+var target as File
+var sources = new vector<File>
+
+func globMatches(file as File, pattern as string) as bool
+{
+	// FIXME: Cannot handle wildcards in the middle or any kinds of more
+	// complicated constructs.
+	assert file
+	assert String.isNotEmpty(pattern)
+	var bn = assert file.baseName()
+	if String.startsWith(pattern, "*") {
+		if String.endsWith(bn, String.getSubString(pattern, 1)):
+			return true
+	}
+	else if String.endsWith(pattern, "*") {
+		if String.startsWith(bn, String.getSubString(pattern, 0, String.getLength(pattern)-1)):
+			return true
+	}
+	else {
+		if String.equals(pattern, bn):
+			return true
+	}
+	return false
+}
+
+func doGlob(parent as File, path as string, results as vector<File>)
+{
+	assert parent
+	var comps = String.split(path, '/', 2)
+	var pattern = Vector.get(comps, 0)
+	if not pattern {
+		results += parent
+		return
+	}
+	var next = Vector.get(comps, 1)
+	var it = parent.entries()
+	while it {
+		var pe = it.next()
+		if not pe:
+			break
+		if globMatches(pe, pattern):
+			doGlob(pe, next, results)
+	}
+}
+
+func glob(parent as File, path as string) as vector<File>
+{
+	var v = new vector<File>
+	doGlob(parent, path, v)
+	return v
+}
+
+func globOne(parent as File, path as string) as File
+{
+	var v = assert glob(parent, path)
+	assert Vector.getSize(v) == 1:
+		Log.error(ctx, "Pattern `" .. path .. "' must match exactly one path.")
+	return Vector.get(v, 0)
+}
+
+func initialize override as bool
+{
+	foreach arg in args {
+		if arg.isParameter() {
+			if target == null {
+				target = File.forPath(arg.parameter)
+			}
+			else {
+				foreach path in glob(Environment.getCurrentDirectory(), arg.parameter):
+					sources += path
+			}
+		}
+		else {
+			arg.reportAsUnsupported(ctx)
+			return false
+		}
+	}
+	return true
+}
+
+func execute override as bool
+{
+	assert target:
+		Log.error(ctx, "No target directory provided.")
+	if target.exists() == false {
+		assert target.createDirectoryRecursive():
+			Log.error(ctx, "Failed to create directory: `" .. target.getPath() .. "'")
+	}
+	assert target.isDirectory():
+		Log.error(ctx, "Not a directory: `" .. target.getPath() .. "'")
+	Log.debug(ctx, "Copying to directory: `" .. target.getPath() .. "'")
+	foreach source in sources {
+		Log.debug(ctx, "Copying source file: `" .. source.getPath() .. "'")
+		assert source.copyFileOrDirectoryTo(target.entry(source.baseName())):
+			Log.error(ctx, "Failed to copy file: `" .. source.getPath() .. "': " .. source.getLastErrorDescription())
+	}
+	return true
+}

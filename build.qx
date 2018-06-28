@@ -1,0 +1,11 @@
+use eqela:slingc:r308
+use eqela:jsh:r1
+use eqela:jkop:r3
+set version r1
+
+build {
+	eqela:jsh delete build
+	eqela:slingc -target=netcore src/jsh -libdir=${eqela:jkop}/src -output=build/app/jsh -OstaticBuild=true
+	eqela:jsh cpto build/jsh-${version} build/app/*/*.dll
+	eqela:jsh makepkq build/jsh-${version} -vendor=eqela -name=jsh -version=${version} -platform=netcore21
+}

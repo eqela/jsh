@@ -1,0 +1,115 @@
+
+/*
+ * This file is part of Eqela JSH
+ * Copyright (c) 2018 Job and Esther Technologies Oy
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+class is ConsoleApplicationMain:
+
+import capex.console
+
+var files = new vector<File>
+var displayOffset = true
+var displayChars = true
+
+func initialize override as bool
+{
+	foreach arg in args {
+		if arg.isParameter() {
+			files += File.forPath(arg.parameter)
+		}
+		else {
+			arg.reportAsUnsupported(ctx)
+			return false
+		}
+	}
+	return true
+}
+
+func toPrintableCharacter(char as char) as string
+{
+	if char < 32 || char > 126:
+		return "."
+	var v = String.forCharacter(char)
+	if v == null:
+		return "."
+	if String.getLength(v) != 1:
+		return "."
+	return v
+}
+
+func outputLine(linestart as long, digits as StringBuilder, chars as StringBuilder)
+{
+	if displayOffset {
+		stdout.print(String.forIntegerHex(linestart, 8))
+		stdout.print(" | ")
+	}
+	var ldigit = 16 * 2 + 15
+	while digits.count() < ldigit:
+		digits.append(' ')
+	stdout.print(digits.toString())
+	if displayChars {
+		stdout.print(" | ")
+		stdout.print(chars.toString())
+	}
+	stdout.print("\n")
+	digits.clear()
+	chars.clear()
+}
+
+func executeForFile(file as File) as bool
+{
+	assert file:
+		Log.error(ctx, "Null file")
+	var reader = assert file.read():
+		Log.error(ctx, "Failed to read file: `" .. file.getPath() .. "'")
+	var buffer = MALLOC 1024
+	var counter = 0 as long
+	var digits = new StringBuilder()
+	var chars = new StringBuilder()
+	var linestart = counter
+	loop {
+		var bytes = reader.read(buffer)
+		if bytes < 1:
+			break
+		for(var n=0; n<bytes; n++) {
+			if counter > 0 && counter % 16 == 0 {
+				outputLine(linestart, digits, chars)
+				linestart = counter
+			}
+			if digits.count() > 0:
+				digits.append(' ')
+			digits.append(String.forIntegerHex(buffer[n] as int, 2))
+			chars.append(toPrintableCharacter(buffer[n] as char))
+			counter ++
+		}
+	}
+	if counter > 0:
+		outputLine(linestart, digits, chars)
+	return true
+}
+
+func execute override as bool
+{
+	foreach file in files:
+		assert executeForFile(file)
+	return true
+}
