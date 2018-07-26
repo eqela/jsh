@@ -1,14 +1,24 @@
-use eqela:slingc:r311
-use eqela:jsh:r2
-use eqela:jkop:r3
-use eqela:dotnet:2.1.301
-use eqela:builder:r2
-set version r2
+
+#
+# This file is part of Eqela JSH
+# Copyright (c) 2018 Eqela Oy
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+
+use eqela:slingbuild:r7
+set version r3
 
 build {
-	eqela:jsh delete build
-	eqela:slingc -target=netcore src/jsh -libdir=${eqela:jkop}/src -output=build/app/jsh -OstaticBuild=true
-	eqela:builder build/app/jsh/src -output=build/app/jsh/bin -dotnetPath=${eqela:dotnet}
-	eqela:jsh cpto build/jsh-${version} build/app/jsh/bin/*.dll
-	eqela:jsh makepkq build/jsh-${version} -vendor=eqela -name=jsh -version=${version} -platform=netcore21
+	eqela:slingbuild buildEqelaPackageFromSource src=src/jsh name=jsh vendor=eqela version=${version}
 }
