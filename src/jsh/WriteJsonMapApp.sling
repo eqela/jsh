@@ -1,0 +1,43 @@
+
+/*
+ * This file is part of Eqela JSH
+ * Copyright (c) 2018 Eqela Oy
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+class:
+
+prop ctx as LoggingContext
+
+func execute(args as vector<string>) as bool
+{
+	var file as File
+	var map = new DynamicMap()
+	foreach arg in args {
+		if not file {
+			file = File.forPath(arg)
+		}
+		else {
+			var comps = String.split(arg, '=', 2)
+			var key = Vector.get(comps, 0)
+			if String.isNotEmpty(key):
+				map.set(key, Vector.get(comps,1))
+		}
+	}
+	assert file:
+		Log.error(ctx, "No file parameter supplied")
+	assert file.setContentsUTF8(JSONEncoder.encode(map)):
+		Log.error(ctx, "Failed to write file: `" .. file.getPath() .. "'")
+	return true
+}

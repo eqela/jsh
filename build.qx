@@ -16,8 +16,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-use eqela:slingbuild:r7
-set version r3
+use eqela:slingbuild:r11
+set version r4
 
 build {
 	eqela:slingbuild buildEqelaPackageFromSource src=src/jsh name=jsh vendor=eqela version=${version}

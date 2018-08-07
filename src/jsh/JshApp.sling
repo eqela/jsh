@@ -51,6 +51,8 @@ func execute override as bool
 		return asBool(new ZipdirApp().executeWithArgumentVector(nargs))
 	if cmd == "tardir":
 		return asBool(new TardirApp().executeWithArgumentVector(nargs))
+	if cmd == "writeJsonMap":
+		return new WriteJsonMapApp().setCtx(ctx).execute(nargs)
 	Log.error(ctx, "Unsupported command: `" .. cmd .. "'")
 	return false
 }
