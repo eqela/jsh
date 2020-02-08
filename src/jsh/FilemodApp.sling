@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class is ConsoleApplicationMain:
+import jk.fs
+import jk.json
+import jk.console
 
-import capex.console
-import capex.util
+class is ConsoleApplicationMain:
 
 var mode as string
 var uid as string
@@ -56,9 +57,9 @@ func initialize override as bool
 func jshError(code as string, message as string, detail as string) as object
 {
 	var v = new DynamicMap()
-	v.set("errorCode", code)
-	v.set("errorMessage", message)
-	v.set("errorDetail", detail)
+	v.setString("errorCode", code)
+	v.setString("errorMessage", message)
+	v.setString("errorDetail", detail)
 	return v
 }
 
@@ -88,22 +89,22 @@ func jshExecute as object
 				return jshError("failedToStat", file.getLastErrorDescription(), file.getPath())
 			if not ffs {
 				ffs = new DynamicVector()
-				v.set("files", ffs)
+				v.setObject("files", ffs)
 			}
 			var info = new DynamicMap()
-			info.set("fileName", file.getBasename())
-			info.set("filePath", file.getPath())
-			info.set("size", st.getSize())
-			info.set("createTime", st.getCreateTime())
-			info.set("accessTime", st.getAccessTime())
-			info.set("modifyTime", st.getModifyTime())
-			info.set("ownerUser", st.getOwnerUser())
-			info.set("ownerGroup", st.getOwnerGroup())
-			info.set("mode", st.getMode())
-			info.set("executable", st.getExecutable())
-			info.set("type", st.getType())
-			info.set("link", st.getLink())
-			ffs.append(info)
+			info.setString("fileName", file.getBasename())
+			info.setString("filePath", file.getPath())
+			info.setInteger("size", st.getSize())
+			info.setLong("createTime", st.getCreateTime())
+			info.setLong("accessTime", st.getAccessTime())
+			info.setLong("modifyTime", st.getModifyTime())
+			info.setInteger("ownerUser", st.getOwnerUser())
+			info.setInteger("ownerGroup", st.getOwnerGroup())
+			info.setInteger("mode", st.getMode())
+			info.setBoolean("executable", st.getExecutable())
+			info.setInteger("type", st.getType())
+			info.setBoolean("link", st.getLink())
+			ffs.appendObject(info)
 		}
 	}
 	return v

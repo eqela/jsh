@@ -23,23 +23,19 @@ import jk.util.archive
 
 class is ConsoleApplicationMain:
 
-var dir as File
+var file as File
 var output as File
-var truncateDir = false
 
 func initialize override as bool
 {
 	foreach arg in args {
 		if arg.isParameter() {
-			assert dir == null:
+			assert file == null:
 				Log.error(ctx, "Too many parameters")
-			dir = File.forPath(arg.parameter)
-		}
-		else if arg.isFlag("truncateDir") || arg.isFlag("truncatedir") || arg.isFlag("flat") {
-			truncateDir = true
+			file = File.forPath(arg.parameter)
 		}
 		else if arg.isOption("output") {
-			output = File.forPath(arg.value)
+			output = File.forPath(arg.getStringValue())
 		}
 		else {
 			arg.reportAsUnsupported(ctx)
@@ -51,25 +47,16 @@ func initialize override as bool
 
 func execute override as bool
 {
-	assert dir:
-		Log.error(ctx, "No directory provided.")
-	assert dir.isDirectory():
-		Log.error(ctx, "Not a directory: `" .. dir.getPath() .. "'")
-	var bn = dir.baseName()
-	assert String.isEmpty(bn) == false:
-		Log.error(ctx, "Empty basename: `" .. dir.getPath() .. "'")
-	var pd = assert dir.getParent():
-		Log.error(ctx, "Directory has no parent: `" .. dir.getPath() .. "'")
-	var parentPath = pd.getPath()
-	assert String.isNotEmpty(parentPath):
-		Log.error(ctx, "Parent path is empty: `" .. dir.getPath() .. "'")
-	var parentPathLength = String.getLength(parentPath)
-	if truncateDir:
-		parentPathLength = String.getLength(dir.getPath())
-	var of = output
-	if of == null:
-		of = pd.entry(bn .. ".zip")
-	assert ZipWriter.writeToZipRecursive(ctx, of, dir, false):
-		Log.error(ctx, "Failed to create zip: `" .. of.getPath() .. "'")
+	assert file:
+		Log.error(ctx, "No zip file provided.")
+	assert output:
+		Log.error(ctx, "No output directory specified.")
+	assert not output.exists():
+		Log.error(ctx, "Output path already exists: `" .. output.getPath() .. "'")
+	var r = ZipReader.extractZipFileToDirectory(file, output, func(file as File) {
+		Log.status(ctx, file.getPath())
+	})
+	assert r:
+		Log.error(ctx, "Failed to extract zip: `" .. file.getPath() .. "'")
 	return true
 }

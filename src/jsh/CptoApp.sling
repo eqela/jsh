@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class is ConsoleApplicationMain:
+import jk.fs
+import jk.log
+import jk.console
 
-import capex.console
-import capex.util
+class is ConsoleApplicationMain:
 
 var target as File
 var sources = new vector<File>
@@ -32,7 +33,7 @@ func globMatches(file as File, pattern as string) as bool
 	assert String.isNotEmpty(pattern)
 	var bn = assert file.baseName()
 	if String.startsWith(pattern, "*") {
-		if String.endsWith(bn, String.getSubString(pattern, 1)):
+		if String.endsWith(bn, String.getEndOfString(pattern, 1)):
 			return true
 	}
 	else if String.endsWith(pattern, "*") {
@@ -89,7 +90,7 @@ func initialize override as bool
 				target = File.forPath(arg.parameter)
 			}
 			else {
-				foreach path in glob(Environment.getCurrentDirectory(), arg.parameter):
+				foreach path in glob(CurrentDirectory.get(), arg.parameter):
 					sources += path
 			}
 		}

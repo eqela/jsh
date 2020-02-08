@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class is ConsoleApplicationMain:
+import jk.log
+import jk.console
 
-import capex.console
+class is ConsoleApplicationMain:
 
 func asBool(v as int) private as bool:
 	return v == 0
@@ -49,6 +50,8 @@ func execute override as bool
 		return asBool(new MakepkqApp().executeWithArgumentVector(nargs))
 	if cmd == "zipdir":
 		return asBool(new ZipdirApp().executeWithArgumentVector(nargs))
+	if cmd == "unzip":
+		return asBool(new UnzipApp().executeWithArgumentVector(nargs))
 	if cmd == "tardir":
 		return asBool(new TardirApp().executeWithArgumentVector(nargs))
 	if cmd == "writeJsonMap":

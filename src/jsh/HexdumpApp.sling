@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class is ConsoleApplicationMain:
+import jk.fs
+import jk.log
+import jk.console
 
-import capex.console
+class is ConsoleApplicationMain:
 
 var files = new vector<File>
 var displayOffset = true
@@ -58,7 +60,7 @@ func outputLine(linestart as long, digits as StringBuilder, chars as StringBuild
 	}
 	var ldigit = 16 * 2 + 15
 	while digits.count() < ldigit:
-		digits.append(' ')
+		digits.appendCharacter(' ')
 	stdout.print(digits.toString())
 	if displayChars {
 		stdout.print(" | ")
@@ -75,7 +77,7 @@ func executeForFile(file as File) as bool
 		Log.error(ctx, "Null file")
 	var reader = assert file.read():
 		Log.error(ctx, "Failed to read file: `" .. file.getPath() .. "'")
-	var buffer = MALLOC 1024
+	var buffer = malloc 1024
 	var counter = 0 as long
 	var digits = new StringBuilder()
 	var chars = new StringBuilder()
@@ -90,9 +92,9 @@ func executeForFile(file as File) as bool
 				linestart = counter
 			}
 			if digits.count() > 0:
-				digits.append(' ')
-			digits.append(String.forIntegerHex(buffer[n] as int, 2))
-			chars.append(toPrintableCharacter(buffer[n] as char))
+				digits.appendCharacter(' ')
+			digits.appendString(String.forIntegerHex(buffer[n] as int, 2))
+			chars.appendString(toPrintableCharacter(buffer[n] as char))
 			counter ++
 		}
 	}

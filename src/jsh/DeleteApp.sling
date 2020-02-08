@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class is ConsoleApplicationMain:
+import jk.fs
+import jk.log
+import jk.console
 
-import capex.console
-import capex.util
+class is ConsoleApplicationMain:
 
 var target as File
 

@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,15 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+import jk.fs
+import jk.log
+import jk.console
+
 class is ConsoleApplicationMain:
 
-depend "nuget:sharpcompress@0.21.1"
+// FIXME: This is C# specific implementation only.
 
-import capex.console
-import capex.util
+depend "nuget:sharpcompress@0.21.1"
 
 var dir as File
 var output as File
@@ -87,10 +90,10 @@ func execute override as bool
 		var fpath = file.getPath()
 		if String.isEmpty(fpath):
 			continue
-		var partialPath = String.getSubString(fpath, parentPathLength + 1)
+		var partialPath = String.getEndOfString(fpath, parentPathLength + 1)
 		if String.isEmpty(partialPath):
 			continue
-		partialPath = String.replace(partialPath, '\\', '/')
+		partialPath = String.replaceCharacter(partialPath, '\\', '/')
 		Log.status(ctx, "[tgz] " .. file.getPath() .. " ..")
 		lang "cs" {{{
 			using(System.IO.Stream fstream = System.IO.File.OpenRead(file.getPath())) {

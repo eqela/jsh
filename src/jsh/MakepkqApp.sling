@@ -1,7 +1,7 @@
 
 /*
  * This file is part of Eqela JSH
- * Copyright (c) 2018 Eqela Oy
+ * Copyright (c) 2018-2020 Eqela Oy
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,15 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-class is ConsoleApplicationMain:
+import jk.io
+import jk.fs
+import jk.log
+import jk.env
+import jk.json
+import jk.console
+import jk.util.archive
 
-import capex.console
-import capex.archive
+class is ConsoleApplicationMain:
 
 var sourceDir as File
 var vendor as string
@@ -64,10 +69,10 @@ func generateManifest as File
 	var tf = assert TemporaryFile.create():
 		Log.error(ctx, "Failed to create temporary file")
 	var manifest = new DynamicMap()
-	manifest.set("vendor", vendor)
-	manifest.set("name", name)
-	manifest.set("version", version)
-	manifest.set("platform", platform)
+	manifest.setString("vendor", vendor)
+	manifest.setString("name", name)
+	manifest.setString("version", version)
+	manifest.setString("platform", platform)
 	var ww = assert tf.write():
 		Log.error(ctx, "Failed to write to temporary file: `" .. tf.getPath() .. "'")
 	var pfw = PrintWriterWrapper.forWriter(ww)
@@ -98,10 +103,10 @@ func writePkq(manifest as File, sourceDir as File, df as File) as bool
 		var fpath = file.getPath()
 		if String.isEmpty(fpath):
 			continue
-		var partialPath = String.getSubString(fpath, parentPathLength + 1)
+		var partialPath = String.getEndOfString(fpath, parentPathLength + 1)
 		if String.isEmpty(partialPath):
 			continue
-		partialPath = String.replace(partialPath, '\\', '/')
+		partialPath = String.replaceCharacter(partialPath, '\\', '/')
 		Log.status(ctx, "[zip] " .. file.getPath() .. " ..")
 		assert zip.addFile(file, "data/" .. partialPath):
 			Log.error(ctx, "Failed to add to ZIP file: `" .. file.getPath() .. "'")
@@ -129,14 +134,14 @@ func execute override as bool
 	if od == null:
 		od = sourceDir.getParent()
 	var fnsb = new StringBuilder()
-	fnsb.append(vendor)
-	fnsb.append('_')
-	fnsb.append(name)
-	fnsb.append('_')
-	fnsb.append(version)
-	fnsb.append('_')
-	fnsb.append(platform)
-	fnsb.append(".pkq")
+	fnsb.appendString(vendor)
+	fnsb.appendCharacter('_')
+	fnsb.appendString(name)
+	fnsb.appendCharacter('_')
+	fnsb.appendString(version)
+	fnsb.appendCharacter('_')
+	fnsb.appendString(platform)
+	fnsb.appendString(".pkq")
 	var fn = fnsb.toString()
 	var df = od.entry(fn)
 	var manifest = assert generateManifest():
